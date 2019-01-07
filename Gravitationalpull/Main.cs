@@ -85,26 +85,26 @@ namespace Gravitationalpull {
                 Main.height / 2,
                 radius));
 
-            // Create attractors - circle
-            for (int a = 90; a < 360; a += 180) {
-                float r = 50; // Radius
-                float angle = new Angle(a, AngleType.Degree).Radians;
-                float x = r * (float)Math.Sin(angle) + attractors[0].position.X;
-                float y = r * (float)Math.Cos(angle) + attractors[0].position.Y;
+            // Create attractors
+            //for (int a = 90; a < 360; a += 180) {
+            //    float r = 50; // Radius
+            //    float angle = new Angle(a, AngleType.Degree).Radians;
+            //    float x = r * (float)Math.Sin(angle) + attractors[0].position.X;
+            //    float y = r * (float)Math.Cos(angle) + attractors[0].position.Y;
 
-                this.attractors.Add(new Attractor(mass,
-                    x,
-                    y,
-                    radius));
-            }
+            //    this.attractors.Add(new Attractor(mass,
+            //        x,
+            //        y,
+            //        radius));
+            //}
 
             // Create movers - in circle
             int degrees = 360;
-            int stepSize = 8/2;
-            int ringsOffset = 5;
-            int ringsAmount = 30;
+            int stepSize = 8 * 4;
+            float ringsOffset = 0.5f;
+            int ringsAmount = 520;
             for (int i = 0; i < ringsAmount; i++) { // Amount of rings
-                for (int a = 0; a < degrees; a += stepSize) { // Ring size
+                for (int a = i; a < degrees+i; a += stepSize) { // Ring size
                     float r = 250 + (ringsOffset * i); // Radius
                     float angle = new Angle(a, AngleType.Degree).Radians;
                     float x = r * (float)Math.Sin(angle) + attractors[0].position.X;
@@ -150,13 +150,23 @@ namespace Gravitationalpull {
                 //Vector2 gravity = new Vector2(0, Main.gravity * mover.mass);
                 //mover.ApplyForce(gravity);
 
-                // Calculate attraction from mover to attractor
+                // Calculate attraction(or repulsion) from mover to attractor
                 foreach (Attractor attractor in this.attractors) {
                     //Vector2 force = attractor.Attract(mover, 5f, 15f); // For random init
-                    Vector2 force = attractor.Attract(mover, 50f, 50f); // For circle init
-                    //Vector2 force = attractor.AttractAndRepel(mover, 500f);
+                    //Vector2 force = attractor.Attract(mover, 50f, 50f); // For circle init
+                    Vector2 force = attractor.AttractAndRepel(mover, 500f);
                     mover.ApplyForce(force);
                 }
+
+                // Calculate attraction(or repulstion) from mover to other movers
+                // REALLY SLOW, WOULDN'T RECOMMEND
+                //foreach (Mover otherMover in this.movers) {
+                //    if (otherMover == mover) continue;
+
+                //    //Vector2 force = mover.Attract(otherMover, 50f, 50f);
+                //    Vector2 force = mover.AttractAndRepel(otherMover, 50000f);
+                //    otherMover.ApplyForce(force);
+                //}
 
                 // Make mover move
                 mover.Update();
