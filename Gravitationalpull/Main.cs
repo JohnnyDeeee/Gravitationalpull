@@ -20,12 +20,14 @@ namespace Gravitationalpull {
         private List<Attractor> attractors;
 
         /* Settings */
-        public static readonly int height = 1080;
-        public static readonly int width = 1920;
+        public static readonly int width = 1280;
+        public static readonly int height = 1024;
         public static float gravity = 10.0f;
-        private readonly int moversAmount = 100;
-        private readonly float minMass = 0.5f; //5;
-        private readonly float maxMass = 5;
+        private int moversAmount;
+        private float minMass;
+        private float maxMass;
+        private bool debug;
+        private bool hideHud;
 
         public Main() {
             Main.graphics = new GraphicsDeviceManager(this);
@@ -44,6 +46,15 @@ namespace Gravitationalpull {
             this.movers = new List<Mover>();
             this.attractors = new List<Attractor>();
 
+            //this.InitializeRandom();
+            this.InitializeCircle();
+        }
+
+        private void InitializeRandom() {
+            this.moversAmount = 100;
+            this.minMass = 0.5f;
+            this.maxMass = 5f;
+
             // Create attractor
             float mass = 2;
             float radius = mass * 8;
@@ -51,19 +62,6 @@ namespace Gravitationalpull {
                 Main.width / 2,
                 Main.height / 2,
                 radius));
-
-            // Create attractors - circle
-            //for (int a = 0; a < 360; a += 60) {
-            //    float r = 500; // Radius
-            //    float angle = new Angle(a, AngleType.Degree).Radians;
-            //    float x = r * (float)Math.Sin(angle) + attractors[0].position.X;
-            //    float y = r * (float)Math.Cos(angle) + attractors[0].position.Y;
-
-            //    this.attractors.Add(new Attractor(mass,
-            //        x,
-            //        y,
-            //        radius));
-            //}
 
             // Create movers - random
             this.movers = new List<Mover>(); // Reset
@@ -73,23 +71,51 @@ namespace Gravitationalpull {
                 float y = RandomExtensions.NextSingle(random, 0, Main.height);
                 this.movers.Add(new Mover(_mass, x, y, _mass * 8));
             }
+        }
+
+        private void InitializeCircle() {
+            this.minMass = 0.1f;
+            // Ignoring maxMass, mass = minMass
+
+            // Create attractor
+            float mass = 2;
+            float radius = mass * 8;
+            this.attractors.Add(new Attractor(mass,
+                Main.width / 2,
+                Main.height / 2,
+                radius));
+
+            // Create attractors - circle
+            for (int a = 90; a < 360; a += 180) {
+                float r = 50; // Radius
+                float angle = new Angle(a, AngleType.Degree).Radians;
+                float x = r * (float)Math.Sin(angle) + attractors[0].position.X;
+                float y = r * (float)Math.Cos(angle) + attractors[0].position.Y;
+
+                this.attractors.Add(new Attractor(mass,
+                    x,
+                    y,
+                    radius));
+            }
 
             // Create movers - in circle
-            //int degrees = 360;
-            //int stepSize = 8;
-            //int ringsOffset = 5;
-            //for (int i = 0; i < 50; i++) { // Amount of rings
-            //    for (int a = 0; a < degrees; a += stepSize) { // Ring size
-            //        float r = 250 + (ringsOffset * i); // Radius
-            //        float angle = new Angle(a, AngleType.Degree).Radians;
-            //        float x = r * (float)Math.Sin(angle) + attractors[0].position.X;
-            //        float y = r * (float)Math.Cos(angle) + attractors[0].position.Y;
+            int degrees = 360;
+            int stepSize = 8/2;
+            int ringsOffset = 5;
+            int ringsAmount = 30;
+            for (int i = 0; i < ringsAmount; i++) { // Amount of rings
+                for (int a = 0; a < degrees; a += stepSize) { // Ring size
+                    float r = 250 + (ringsOffset * i); // Radius
+                    float angle = new Angle(a, AngleType.Degree).Radians;
+                    float x = r * (float)Math.Sin(angle) + attractors[0].position.X;
+                    float y = r * (float)Math.Cos(angle) + attractors[0].position.Y;
 
-            //        float _mass = RandomExtensions.NextSingle(random, this.minMass, this.maxMass);
-            //        _mass -= i * 0.1f;
-            //        this.movers.Add(new Mover(_mass, x, y, _mass * 8));
-            //    }
-            //}
+                    float _mass = this.minMass;
+                    _mass -= i * 0.1f; // Decrease mass on each outer ring
+                    _mass = MathHelper.Clamp(_mass, 0.1f, this.minMass); // Mass = size, so if the mass is the low we wont see the mover
+                    this.movers.Add(new Mover(_mass, x, y, _mass * 8));
+                }
+            }
         }
 
         protected override void LoadContent() {
@@ -106,6 +132,10 @@ namespace Gravitationalpull {
                 Exit();
             if (Keyboard.GetState().IsKeyUp(Keys.R) && this.prevKeyboardState.IsKeyDown(Keys.R))
                 this.Initialize();
+            if (Keyboard.GetState().IsKeyUp(Keys.D) && this.prevKeyboardState.IsKeyDown(Keys.D))
+                this.debug = !this.debug;
+            if (Keyboard.GetState().IsKeyUp(Keys.Space) && this.prevKeyboardState.IsKeyDown(Keys.Space))
+                this.hideHud = !this.hideHud;
             if (Mouse.GetState().LeftButton == ButtonState.Released && this.prevMouseState.LeftButton == ButtonState.Pressed) {
                 float mass = RandomExtensions.NextSingle(random, 0.5f, 3);
                 this.movers.Add(new Mover(mass, Mouse.GetState().Position.ToVector2().X, Mouse.GetState().Position.ToVector2().Y, mass * 8));
@@ -122,7 +152,9 @@ namespace Gravitationalpull {
 
                 // Calculate attraction from mover to attractor
                 foreach (Attractor attractor in this.attractors) {
-                    Vector2 force = attractor.Attract(mover);
+                    //Vector2 force = attractor.Attract(mover, 5f, 15f); // For random init
+                    Vector2 force = attractor.Attract(mover, 50f, 50f); // For circle init
+                    //Vector2 force = attractor.AttractAndRepel(mover, 500f);
                     mover.ApplyForce(force);
                 }
 
@@ -143,13 +175,18 @@ namespace Gravitationalpull {
                 mover.Draw(spriteBatch);
             }
 
-            foreach (Attractor attractor in this.attractors) {
-                //attractor.Draw(spriteBatch);
-            }
+            if(this.debug)
+                foreach (Attractor attractor in this.attractors) {
+                    attractor.Draw(spriteBatch);
+                }
 
             spriteBatch.Begin();
 
-            spriteBatch.DrawString(Main.font, "Press R to restart", new Vector2(5, 5), Color.White);
+            if (!hideHud) {
+                spriteBatch.DrawString(Main.font, "Press R to restart", new Vector2(5, 5), Color.White);
+                spriteBatch.DrawString(Main.font, "Press D to debug", new Vector2(5, 25), Color.White);
+                spriteBatch.DrawString(Main.font, "Press SPACE to hide this text", new Vector2(5, 45), Color.White);
+            }
 
             spriteBatch.End();
 
